@@ -7,7 +7,7 @@ output: pdf_document
 
 # Data set up
 
-As before, you will need to load the data from the `github` resource
+As before, you will need to load the data from he `github` resource
 ```{r eval=T,  message=F, warning=F}
 library(GISTools)
 library(spgwr)
@@ -117,7 +117,7 @@ summary(tmp)
 And the `SpatialPixelsDataFrame` can be mapped by defining a mapping function:
 ```{r}
 gw.mapping <- function(grd, index = 1, cols=brewer.pal(4,'Reds'), 
-    bounding.poly = lib, x = 297000, y = 3650000, tit = "My Title") {
+    bounding.poly = roilib, x = 297000, y = 3650000, tit = "My Title") {
   z = data.frame(grd)[, index]
   zz = z[!is.na(z)]
   shades <- auto.shading(zz, cols = cols)

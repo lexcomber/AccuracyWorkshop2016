@@ -6,11 +6,7 @@ output: pdf_document
 ---
 
 # Introduction
-<<<<<<< HEAD
-In this first session you will hopefully become familiar with the data and with some mapping operations in R using the `GISTools` package. Specifically you will: 
-=======
 In this first session you will become familiar with the data and with some mapping operations in R using the `GISTools` package. Specifically you will: 
->>>>>>> 1c16e5cf5f06237cd2ef719bc8e1f8eb5396f8de
 
 - open a point dataset (shapefile) of a field validation exercise
 - inspect the attributes and spatial properties of the data 
@@ -37,7 +33,7 @@ Then the packages can be called and the data can be loaded into R after you have
 library(GISTools)
 library(spgwr)
 setwd("/Users/geoaco/Desktop/my_docs_mac/leeds_work/workshop/datacode")
-lib <- readShapePoly("libya.shp")
+roilib <- readShapePoly("libya.shp")
 data <- read.csv("all_data_new2.csv")
 ```
 
@@ -93,7 +89,7 @@ Tripoli <- SpatialPointsDataFrame(coords = loc, data = data[1,])
 plot(data.spdf, pch = 20, col = "white")
 plot(Tripoli, pch = 19, add = T, cex = 3, col = "#31A354")
 plot(data.spdf, add = T, pch = 20, cex = 1, col = "Black")
-plot(lib, add = T)
+plot(roilib, add = T)
 ```
 
 # The correspondence matrix
