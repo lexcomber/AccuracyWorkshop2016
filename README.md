@@ -10,11 +10,12 @@ Spatial Analysis of (Remote Sensing) Accuracy with Geographically Weighted frame
 
 This will be delivered in Montpellier in July 2016 by Lex Comber and Paul Harris as one of the Spatial Accuracy 2016 Conference workshops. The workshop includes the following sessions:
 
-0. Overview
 1. Introduction
 2. GW framework
 3. Mapping Spatial Accuracy
 4. Putting it all Together
 5. Additional materials - GW Kappa and additional considerations
+
+An Overview documents describes some background and practical considerations.
 
 At the momement these scripts generate spatially distributed measures of Overall, User and Producer accuracies in the manner of Comber et al 2012 and Comber 2013. Descriptions of how to generate geographically weighted estimate of the Kappa statistic $\hat{\kappa}$, also known as k-hat, are also included in the the Mapping Spatial Accuracy course. 
