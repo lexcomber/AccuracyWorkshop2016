@@ -1,26 +1,44 @@
 ---
-title: "GW Kappa"
+title: "GW Kappa and other 'Death to Kappa' measures"
 author: "Lex Comber"
-date: "6 June 2016"
+date: "June 2016"
 output: pdf_document
 ---
 
-# Introduction
+# 1. Introduction
 
-The final Geographically weighted extension is to calculate spatially distributed measures of the Kappa statistic estimate $\hat{\kappa}$, also known as k-hat. A full description of $\hat{\kappa}$ can be found in the classic Congalton (1991) paper at [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf).
+The final Geographically weighted extension is to calculate spatially distributed measures of a number of other statistics for reporting accuracy. These include the Kappa statistic estimate $\hat{\kappa}$, also known as k-hat and a full description of  $\hat{\kappa}$ can be found in the classic Congalton (1991) paper at [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf). What $\hat{\kappa}$ seeks to do is to measure the relationship between chance agreements between *Observed* and *Predicted* classes and the expected disagreement. It uses all the elements in the correspondence matrix and not just the diagonal ones and provides a measure of the proportion of agreement after chance agreement has been removed. 
 
-What $\hat{\kappa}$ seeks to do is to measure the relationship between chance agreements between *Observed* and *Predicted* classes and the expected disagreement. It uses all the elements in the correspondence matrix and not just the diagonal ones and provides a measure of the proportion of agreement after chance agreement has been removed. 
+However the Kappa statistic has been heavily criticized by Pontius and Millones (2011), particular because its underlying assumption of a en expected random distribution of errors does not reflect the spatial auto-correlation of of many landscape processes including mapping errors. For these reasons Pontius and Millones (2011) recommend that
+the remote sensing community '*abandon the use of Kappa indices for purposes of accuracy assessment and map comparison*' and they suggest the use of *quantity disagreement* and *allocation disagreement* measures, described in their paper at [https://www.researchgate.net/publication/233196329_Death_to_Kappa_birth_of_quantity_disagreement_and_allocation_disagreement_for_accuracy_assessment_Int_J_Remote_Sens](https://www.researchgate.net/publication/233196329_Death_to_Kappa_birth_of_quantity_disagreement_and_allocation_disagreement_for_accuracy_assessment_Int_J_Remote_Sens) 
 
-# Data
-Then the packages can be called and the data can be loaded into R after you have set the working directory using the `setwd()` function. The example from my computer is below:
+Both of these approaches are considered under a Geographically Weighted framework in turn.
 
-You can download the data from github:
+# 2. Data
+The packages can be called and the data can be loaded into R. This can be done locally after you have set the working directory using the `setwd()` function. The example from my computer is below:
+```{r eval=F}
+library(GISTools)
+library(spgwr)
+setwd("/Users/geoaco/Desktop/my_docs_mac/leeds_work/workshop/datacode")
+roilib <- readShapePoly("lib_clip.shp")
+data <- read.csv("all_data_new2.csv")
+```
+
+Alternatively the code below loads into your working directory directly from a `RData` file also on the site.  
+
 ```{r eval=T,  message=F, warning=F}
 library(GISTools)
 library(spgwr)
 library(repmis)
-source_data("github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
+source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
 ```
+
+And have a look at the what you have
+```{r eval=T}
+ls()
+head(data.frame(data))
+```
+
 And this can be set up for the analysis as before - this time making sure the data have a projection: 
 ```{r eval=T,  message=F, warning=F}
 # the projection
@@ -40,10 +58,40 @@ index = match(lib$sat, class.lut$code)
 lib$sat = class.lut$num[index]
 ```
 
+# 3. GW crosstabs
+For this we will use the `gwxtab` package which can be downloaded from `github` in the following way (**NB**: you may have to install the `devtools` package to do this):
+```{r eval=F}
+install.packages("devtools", dep = T)
+library(devtools)
+install_github('chrisbrunsdon/gwxtab')  
+```
+And the the package can be loaded: 
+```{r eval=T}
+library(gwxtab)
+```
+You should explore the documentation around `gwxtab` - Harry and I have have both worked extensively with Chris Brunsdon - he does some great work and creates great code.
 
-# Create the matrix
 
-The code below creates the change / correspondence / accuracy matrix as before: 
+# 4. Kappa
+
+## Calculating a normal, aspatial Kappa Estimate
+The formal notation of the derivation of the Kappa statistic estimate $\hat{\kappa}$ is below: 
+
+\begin{equation}
+\hat{\kappa} = \frac{N\sum_{i=1}^{r} x_{ii} - \sum_{i=1}^{r} (x_{i+} * x_{+i})}
+  {N^2 - \sum_{i=1}^{r} (x_{i+} * x_{+i})}
+\label{eq:equation1}
+\end{equation}
+
+Essentially what this does is: 
+
+1. Multiply the sum of the diagonals by the table sum. 
+2. Then subtract from this the sum of the row and column marginal totals products. In this case these would be $[(21x39)+(39*43)+(46*30)+(60*47)+(44*51)]$
+3. Next, divide this by the sum of the table squared - minus the sum of the row and column marginal totals products as above
+
+The top part of the equation gives a measure of chance agreement and the bottom part a measure of the expected disagreements.
+
+We need to create the matrix and the code below creates the change / correspondence / accuracy matrix as before: 
 ```{r eval=T}
 tab <- table(data$Boolean_RS, data$Boolean_FS)
 class.names.long <- c("Bare", "Grazing", "Urban", "Vegetation", "Woodland") 
@@ -56,18 +104,7 @@ colnames(tab)[6] <- "Total"
 tab
 ```
 
-# Calulating a Kappa Estimate
-The formal notation of the derivation of the Kappa statistic estimate $\hat{\kappa}$ is below: $$ very large equation $$.
-
-Essentially what this does is: 
-
-1. Multiply the sum of the diagonals by the table sum. 
-2. Then subtract from this the sum of the row and column marginal totals products. In this case these would be $[(21x39)+(39*43)+(46*30)+(60*47)+(44*51)]$
-3. Next, divide this by the sum of the table squared - minus the sum of the row and column marginal totals products as above
-
-The top part of the equation gives a measure of chance agreement and the bottom part a measure of the expected disagreements.
-
-So in this case this could be calculated from the table as follows:
+So in this case a Kappa Estimate could be calculated from the table as follows:
 ```{r eval=T}
 tab.tmp <- tab[1:5, 1:5]
 part.1 <- sum(diag(tab.tmp)) * sum(tab.tmp)
@@ -77,20 +114,9 @@ k <- (part.1 - part.2) / (part.3 - part.2)
 cat("Kappa estimate (k-hat): ", round(k,3))
 ```
 
-# GW crosstabs
-For this we will use the `gwxtab` package which can be downloaded from `github` in the following way (**NB**: you may have to install the `devtools` package to do this):
-```{r eval=F}
-install.packages("devtools", dep = T)
-library(devtools)
-install_github('chrisbrunsdon/gwxtab')  
-```
-And the the package can be loaded: 
-```{r eval=T}
-library(gwxtab)
-```
-You should explore the documentation around `gwxtabs` - Harry and I have have both worked extensively with Chris Brunsdon - he does some great work and creates great code.
+## GW Crosstabs
 
-## Step 1: create a dummy crosstab
+### Step 1: create a dummy crosstab
 Once the data and libraries area loaded the first step is to create a dummy `crosstabs` object using the `new_spxt` function: 
 ```{r eval=T}
 dummy_xtab <- new_spxt(lib,'field','sat')
@@ -104,7 +130,7 @@ The SpatialCrossTabs object has a location associated with each cross-tabulation
 ```{r eval=T}
 dummy_xtab[7]
 ```
-## Step 2: create a GW crosstab
+### Step 2: create a GW crosstab - just for testing!
 The next step is to create a set of dummy crosstabs at any geographical point location $u_1, u_2$. Functions that take a location as an argument and return the cross tabulation are called probe functions. The function `gwxtab_probe` is a tool for making probe functions. It takes a dummy cross-tabulation 'SpatialCrossTabs` object and a bandwidth to create a new function that maps a geographical location $(u_1,u_2)$ on to a geographically weighted cross-tabulation. At this stage in the code development it defaults to bisquare kernel.
 
 The kernel can be fixed - e.g. 20km
@@ -127,7 +153,7 @@ gwxt_ad <- gwxtab_probe(dummy_xtab,adapt(bw))
 round(gwxt_ad(330749, 3627772 ), 3)
 ```
 
-## Step 3: define a function to apply to the crosstab 
+### Step 3: define a function to apply to the crosstab 
 The initial code below defines a function to calculate local measures of overall accuracy form each cross-tab: 
 ```{r eval=T}
 # overall accuracy function
@@ -146,7 +172,7 @@ gw_ov <- gwxtab_probe(dummy_xtab,adapt(bw),melt=ov)
 gw_ov(330749, 3627772)
 ``` 
 
-## Step 4: Spatial Extension and Visualisation of local crosstab measures
+### Step 4: Spatial Extension and Visualisation of local crosstab measures
 
 The results can be visualized using the code used for the `spgwr` approaches described in earlier practicals. In this example hexbins are used. 
 ```{r eval=T}
@@ -172,23 +198,24 @@ plot(roilib)
 plot(hg_ov,pch=16,col='indianred',cex=0.8*hg_ov$ov,add=TRUE)
 ```
 
-## Sumamry
+### Sumamry
 The steps above provide a framework for calculating any GW statistic from a correspondence matrix of cross tabulation. You should explore the parameters that are passed to the various functions here. For example, what is the effect of changing the `bw` variable to 15? How do the maps differ?  
-# GW Kappa
+
+## GW Kappa
 
 The above code can be modified, replacing the function for overall accuracy `ov`, with a function for calculating local Kappa estimates. In this case we will use an adaptive bandwidth of 15 data points.
 
-## Step 1: create a dummy crosstab
+### Step 1: create a dummy crosstab
 This is the same as above but repeated for clarity.
 ```{r eval=T}
 dummy_xtab <- new_spxt(lib,'field','sat')
 ```
-## Step 2: create a GW crosstab
+### Step 2: create a GW crosstab - just for testing!
 ```{r eval=T}
 gwxt_ad <- gwxtab_probe(dummy_xtab,adapt(15))
 round(gwxt_ad(330749, 3627772 ), 3)
 ```
-## Step 3: define a function to apply to the crosstab 
+### Step 3: define a function to apply to the crosstab 
 In this case this is the Kappa estimate: 
 ```{r eval=T}
 # Define Kappa estimate
@@ -201,7 +228,7 @@ kp <- function(x) {
 }
 ```
 
-## Step 4: Spatial Extension and Visualisation of local crosstab measures
+### Step 4: Spatial Extension and Visualisation of local crosstab measures
 
 Create the hexbin objects: 
 ```{r eval=T}
@@ -210,6 +237,15 @@ hg <- spsample(roilib,5000,'hexagonal',offset=c(0.5,0.5))
 Create the `SpatialPointsDataFrame` object:
 ```{r eval=T}
 hg_kp <- gwxtab_sample(hg,dummy_xtab,adapt(15),melt=kp)
+
+# now on oaccasion this can result in very small negative values
+# and small negative anomalies can be set to the min positive value
+# see http://www.cis.rit.edu/~ejipci/Reports/On_Using_and_Computing_the_Kappa_Statistic.pdf
+negkap2min <- function (x) {
+  index <- x < 0
+  x[index] <- min(x[!index])
+  return(x)}
+hg_kp$kappa <- negkap2min(hg_kp$kappa)
 ```
 
 Plot the hexagonal grid of points:
@@ -220,7 +256,7 @@ plot(roilib)
 plot(hg_kp,pch=16,col='indianred',cex=0.8*hg_kp$kappa,add=TRUE)
 ```
 
-# Familiar visulisation
+## Familiar visulisation
 
 The code below visualizes the data in the same way as you have done in previous exercises. A slightly different grid has to be created to support he `level.plot` function and then the local kappa re-calculated over that grid: 
 
@@ -258,9 +294,153 @@ level.plot(kp.spdf,shades)
 lib.masker = poly.outer(kp.spdf, roilib, extend = 100)
 add.masking(lib.masker) 
 plot(roilib, add = T)
-choro.legend(300000, 3648500, shades) 
+choro.legend(300000, 3648000, shades, cex = 0.7) 
 title("GW Kappa Estimate")
 ```
+
+# 5. Quantity and Allocation Disagreement measures
+
+Pontius and Millones (2011) define *quantity disagreement* as the amount of difference between the *Observed* reference data and the *Predicted* classified data, and compares the proportions of the classes. 
+
+They define *allocation disagreement* as the amount of difference between the *Observed* data and the *Predicted* data that are due mis-matches in the spatial allocation of classes, relative to the proportions of the classes in the *Observed* and *Predicted* data. 
+
+These can be calculated for the overall correspondence matrix using the code snippets below. First re-create the matrix 
+
+```{r eval=T}
+tab <- table(data$Boolean_RS, data$Boolean_FS) # FS columns, RS rows
+class.names.long <- c("Bare", "Grazing", "Urban", "Vegetation", "Woodland") 
+rownames(tab) <- class.names.long
+colnames(tab) <- class.names.long
+tab
+```
+
+The Geographically weighted approach applies these measures locally.
+
+## Quantity disagremment
+The quantity disagreement is computed from the sum of the row totals (the *Predicted* data) minus the sum of the column totals (the *Observed* data) divided by 2:
+```{r eval=T}
+q <- sum(abs(apply(tab, 1, sum) - apply(tab, 2, sum)))/2 
+q
+```
+Now this provides a measure a quantity disagreement measure of `29` which is obviously specific to the number of pixels summarized in the matrix. To make this generic, this can be normalized by dividing by the `sum` of the matrix or by passing in a normalized matrix:
+```{r eval=T}
+q <- sum(abs(apply(tab, 1, sum) - apply(tab, 2, sum)))/2 
+q/sum(tab)
+```
+Or
+```{r eval=T}
+q <- sum(abs(apply(tab/sum(tab), 1, sum) - apply(tab/sum(tab), 2, sum)))/2 
+q
+```
+
+## Allocation disagremeent
+The allocation disagreement can be computed from the overall difference between the *Observed* and *Predicted* data (ie total number of pixels minus the diagonal agreement) minus the *quantity disagrement*, `q`: 
+
+```{r eval=T}
+o <- sum(tab) - sum(diag(tab))
+q <- sum(abs(apply(tab, 1, sum) - apply(tab, 2, sum)))/2 
+a <- o-q
+a
+```
+
+Again this can be normalized so that the measures are not proportional to the number of pixels in the correspondence matrix
+```{r eval=T}
+o <- sum(tab) - sum(diag(tab))
+q <- sum(abs(apply(tab, 1, sum) - apply(tab, 2, sum)))/2 
+a <- o-q
+a/sum(tab)
+```
+
+## GW Allocation disagremment
+
+The same steps are followed for the GW Allocation disagreement, which again requires construction of the `gwxtab` objects, etc: 
+### Step 1: create a dummy crosstab
+This is the same as above but repeated for clarity.
+```{r eval=T}
+dummy_xtab <- new_spxt(lib,'field','sat')
+```
+### Step 2: create a GW crosstab - just for testing!
+```{r eval=T}
+gwxt_ad <- gwxtab_probe(dummy_xtab,adapt(15))
+round(gwxt_ad(330749, 3627772 ), 3)
+```
+### Step 3: define a function to apply to the crosstab 
+In this case this is the Quantity Disagreement : 
+```{r eval=T}
+# Define function
+qd <- function(x) {
+	q <- sum(abs(apply(x, 1, sum)
+    - apply(x, 2, sum)))/2 
+  # normalise  
+	q <- q/sum(x)
+  return(data.frame(qd = q))
+}
+```
+### Step 4: Spatial Extension and Visualisation of local crosstab measures
+Create the hexbin objects: 
+```{r eval=T}
+hg <- spsample(roilib,5000,'hexagonal',offset=c(0.5,0.5))
+```
+Create the `SpatialPointsDataFrame` object:
+```{r eval=T}
+hg_qd <- gwxtab_sample(hg,dummy_xtab,adapt(15),melt=qd)
+```
+
+Plot the hexagonal grid of points:
+```{r eval=T}
+par(mar=c(0,0,1,0)+0.1)
+plot(roilib)
+plot(hg_qd,pch=16,col='indianred',cex=hg_qd$qd/max(hg_qd$qd),add=TRUE)
+title("Quantity disagremment")
+```
+
+## GW Quantity disagremment
+
+The Geographically weighted approach applies these measures locally, which again requires construction of the `gwxtab` objects as in the Kappa example above. This is done in the following way: 
+### Step 1: create a dummy crosstab
+This is the same as above but repeated for clarity.
+```{r eval=T}
+dummy_xtab <- new_spxt(lib,'field','sat')
+```
+### Step 2: create a GW crosstab - just for testing!
+```{r eval=T}
+gwxt_ad <- gwxtab_probe(dummy_xtab,adapt(15))
+round(gwxt_ad(330749, 3627772 ), 3)
+```
+### Step 3: define a function to apply to the crosstab 
+In this case this is the Allocation Disagreement : 
+```{r eval=T}
+# Define Kappa estimate
+ad <- function(x) {
+  o <- sum(x) - sum(diag(x))
+  q <- sum(abs(apply(x, 1, sum) - apply(x, 2, sum)))/2 
+  a <- (o-q)/sum(x)
+  return(data.frame(ad = a))
+}
+```
+### Step 4: Spatial Extension and Visualisation of local crosstab measures
+Create the hexbin objects: 
+```{r eval=T}
+hg <- spsample(roilib,5000,'hexagonal',offset=c(0.5,0.5))
+```
+Create the `SpatialPointsDataFrame` object:
+```{r eval=T}
+hg_ad <- gwxtab_sample(hg,dummy_xtab,adapt(15),melt=ad)
+```
+
+Plot the hexagonal grid of points:
+```{r eval=T}
+par(mar=c(0,0,1,0)+0.1)
+plot(roilib)
+plot(hg_ad,pch=16,col='indianred',cex=hg_ad$ad/max(hg_ad$ad),add=TRUE)
+title("Allocation disagremment")
+```
+
+# Epilogue
+You may find it useful to have a look at the `diffeR` package put together by Gil Pontius and Alí Santacruz at [https://cran.r-project.org/web/packages/diffeR/diffeR.pdf](https://cran.r-project.org/web/packages/diffeR/diffeR.pdf). This includes a number of functions for calculating quality and allocation disagreements, including per class measures which were not implemented here. You could perhaps try to develop some of these such as the `quantityDj` function into a GW framework.
+
+In assembling these tutorials, a number of useful packages that were not previously known to us were found: `gwxtab` which really helped int he creation of the more complex (ie not probability based) spatially distributed measures of error. What we have done here is bolt these together with other commands from other packages - indicating that a good way of solving problems is to see who else might have done similar work.  
+
 # End
 
 

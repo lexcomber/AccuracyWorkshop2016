@@ -7,13 +7,26 @@ output: pdf_document
 
 # Data set up
 
-As before, you will need to load the data from he `github` resource
+You will need to load the data. 
+
+This can be done locally after you have set the working directory using the `setwd()` function. The example from my computer is below:
+```{r eval=F}
+library(GISTools)
+library(spgwr)
+setwd("/Users/geoaco/Desktop/my_docs_mac/leeds_work/workshop/datacode")
+roilib <- readShapePoly("lib_clip.shp")
+data <- read.csv("all_data_new2.csv")
+```
+
+Alternatively the code below loads into your working directory directly from a `RData` file also on the site.  
+
 ```{r eval=T,  message=F, warning=F}
 library(GISTools)
 library(spgwr)
 library(repmis)
 source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
 ```
+
 And have a look at the what you have
 ```{r eval=T}
 ls()

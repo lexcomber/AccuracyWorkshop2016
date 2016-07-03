@@ -26,14 +26,18 @@ install.packages("GISTools", dep = T)
 install.packages("spgwr", dep = T)
 ```
 
-A zip file containing the data used in this practical can be downloaded from Lex Comber's GitHub site [**https://github.com/lexcomber/LexTrainingR/blob/master/GW_Accuracy_Data.zip**](https://github.com/lexcomber/LexTrainingR/blob/master/GW_Accuracy_Data.zip). You could save this to your working directory and the load it directly. You can also check your current directory using the `getwd()` function. 
+A zip file containing the data used in this practical can be downloaded from Lex Comber's GitHub site [https://github.com/lexcomber/AccuracyWorkshop2016/blob/master/GW_Accuracy_Data.zip](https://github.com/lexcomber/AccuracyWorkshop2016/blob/master/GW_Accuracy_Data.zip). You could save this to your working directory and the load it directly. You can also check your current directory using the `getwd()` function. 
 
-Then the packages can be called and the data can be loaded into R after you have set the working directory using the `setwd()` function. The example from my computer is below:
+Then the packages can be called and the data can be loaded into R. 
+
+You will need to load the data. 
+
+This can be done locally after you have set the working directory using the `setwd()` function. The example from my computer is below:
 ```{r eval=F}
 library(GISTools)
 library(spgwr)
 setwd("/Users/geoaco/Desktop/my_docs_mac/leeds_work/workshop/datacode")
-roilib <- readShapePoly("libya.shp")
+roilib <- readShapePoly("lib_clip.shp")
 data <- read.csv("all_data_new2.csv")
 ```
 
@@ -46,10 +50,10 @@ library(repmis)
 source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
 ```
 
-The first thing to do is to examine the data. You will need to point R to your working directory which can be done through the menu or can be specified. You should examine the 'data' variable: 
+And have a look at the what you have
 ```{r eval=T}
 ls()
-head(data)
+head(data.frame(data))
 ```
 
 This shows that the are a number of continuous and categorical variables. The first few columns of data indicate the ID (`PointID`) and the easting and northing of the data point.
