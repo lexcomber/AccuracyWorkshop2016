@@ -1,13 +1,13 @@
 ---
 title: "Mapping spatial accuracy"
-author: "Lex Comber"
-date: "June 2016"
+author: "Lex Comber & Paul Harris"
+date: "July 2016"
 output: pdf_document
 ---
 
 # Introduction
 
-In the last section you created a spatially distributed measure of overall accuracy. In this you created a variable that recorded whether the *observed* class in the field was the same as the class *predicted* by the classification algorithm. It recorded a series of `1`s and `0`s to indicate whether the classes matched or not. These were analysed using classic logistic regression (Generalized Linear Models) to get *a*spatial measures of accuracy and then using Geographically Weighted logistic Regression to generate spatially distributed measures.   
+In the last section you created a spatially distributed measure of overall accuracy. In this you created a variable that recorded whether the *observed* class in the field was the same as the class *predicted* by the classification algorithm. It recorded a series of `1`s and `0`s to indicate whether the classes matched or not. These were analysed using classic logistic regression (a Generalized Linear Model) to get *a*spatial measures of accuracy and then using Geographically Weighted logistic Regression to generate spatially distributed measures.   
 
 In this section you will develop further measures of accuracy that are commonly used in remote sensing: User and Producer accuracies and an estimate of the Kappa statistic $\hat{\kappa}$, also known as k-hat. A full description of these can be found in the classic Congalton (1991) paper at [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf).
 
@@ -82,7 +82,7 @@ round(tab, 2)
 ```
 
 # Recap: User Accuracy
-So from the table in the `tab` variable you can see that for example Grazing land has a User Accuracy of `r round(tab[2,7], 3)`. User accuracy seeks to provide a measure of per-class accuracy that describes how probable it is that a pixel (or segmented object) of that has been labelled as *Grass* will actually be that class if it was visited in the field for example. It indicates the errors of commission (inclusion) and for the potential user of the map it indicates the probability of correctly finding the class indicated on the map present on the ground.
+So from the table in the `tab` variable you can see that for example, Grazing land has a User Accuracy of `r round(tab[2,7], 3)`. User accuracy seeks to provide a measure of per-class accuracy that describes how probable it is that a pixel (or segmented object) of that has been labelled as *Grass* will actually be that class if it was visited in the field for example. It indicates the errors of commission (inclusion) and for the potential user of the map it indicates the probability of correctly finding the class indicated on the map present on the ground.
 
 User accuracies, as stated in the *Introduction* session, can be estimated using a logistic regression to analyse the reference data against the classified data in the following way:
 $$P(y = 1) = logit(b_0 + b_1x_1)      (eqn 1)$$
@@ -134,7 +134,7 @@ cat("user accuracy:", round(mod.user, 3))
 # GW User Accuracy
 So the User accuracy is the probabilities arising from a GLM constructed from binary variables (i.e. containing `1`s and `0`s) describing whether the class was *observed* in the field (`fs.class`) and whether the class was *predcited* by the remote sensing classification (`rs.class`). In the global analysis all 210 data points were used to construct the model.
 
-Recall that in Geographically Weighted approaches, local models are constructed, in this case at each location on a grid shown below. The `fsrs` variable created above can be used to construct `SpatialPointsDataFrame` object using the coordinates in the `data` variable and used as input to the GW GLM function, `ggwr`:
+Recall that in GW approaches, local models are constructed, in this case at each location on a grid shown below. The `fsrs` variable created above can be used to construct `SpatialPointsDataFrame` object using the coordinates in the `data` variable and used as input to the GW GLM function, `ggwr`:
 ```{r eval=T}
 fsrs.spdf <- SpatialPointsDataFrame(coords = data[,2:3], 
   data = data.frame(fsrs))
@@ -168,7 +168,7 @@ coefs[,2] <- rowSums(coefs)
 # P(x = 1|y = 1)
 gwr.user <- alogit(coefs[,2]) 
 ```
-The spatial variation in the coefficients is indicated by the distribution of User accuracy values:
+The (spatial) variation in the coefficients is indicated by the distribution of User accuracy values:
 ```{r eval=T}
 summary(gwr.user)
 ```
@@ -203,7 +203,7 @@ Producer accuracies, as stated in the *Introduction* session, can be estimated u
 $$P(x = 1) = logit(b_0 + b_1y_1)    (eqn 2)$$
 where $P(x = 1)$ is the probability that the classified land-cover class is correctly predicted by the reference data, $y_1$, $b_0$ is the intercept term and $b_1$ is the slope. This generates the probability that the classified data is the class (i.e. is `TRUE` or `equals 1`), given that the reference data is the class (i.e. also `equals 1`).
 
-Again recall that in the *Introduction* session you used a GLM (Generalized Linear Model)  to calculate the probabilities associated with Grazing land Producer accuracy and the approach was as follows:
+Again recall that in the *Introduction* session you used a GLM to calculate the probabilities associated with Grazing land Producer accuracy and the approach was as follows:
 
 1. for class `x`, create a `data.frame` containing: 
 a) the data locations where the remote sensing indicated class `x` [0 or 1]
@@ -227,7 +227,7 @@ cat("Producer accuracy:", round(mod.producer, 3))
 ```
 
 # GW Producer Accuracy
-So the Producer accuracy is the probabilities arising from a GLM constructed from binary variables (i.e. containing `1`s and `0`s) describing whether the class was *predicted* in the remote sensing classification (`rs.class`) and whether the class was *observed* by the field (`fs.class`) . In the global analysis all 210 data points were used to construct the model.
+So the Producer accuracy is the probabilities arising from a GLM constructed from binary variables (i.e. containing `1`s and `0`s) describing whether the class was *predicted* in the remote sensing classification (`rs.class`) and whether the class was *observed* by the field (`fs.class`). In the global analysis all 210 data points were used to construct the model.
 
 As for GW User accuracy, local models are constructed at each location on the grid using the 
 `fsrs.spdf` `SpatialPointsDataFrame` using the nearest 15% of the data points. The GW Producer model is as follows:
@@ -277,6 +277,6 @@ round(summary(gwr.producer)[c(2,5)],3)
 
 # Summary
 
-In this section you have applied Geographically Weighted approaches to generated *local* models of user, producer and Overall accuracies. These spatially distributed measures can be mapped. In the next section you will create develop some code to automate these operations in functions.
+In this section you have applied GW approaches to generated *local* models of user, producer and Overall accuracies. These spatially distributed measures can be mapped. In the next section you will develop some code to automate these operations in functions.
 
 

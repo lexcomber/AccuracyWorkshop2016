@@ -1,7 +1,7 @@
 ---
 title: "Putting it all Together"
-author: "Lex Comber"
-date: "June 2016"
+author: "Lex Comber and Paul Harris"
+date: "July 2016"
 output: pdf_document
 ---
 
@@ -112,7 +112,8 @@ gw.accuracy <- function(spdf, Field.class = "Boolean_FS",
   # Commented Out: Summary of the GW variation
   # cat("GW overall accuracy:", summary(gwr.ov))
   # create SpatialPixelsDF to return from the function
-  gw.spdf <-SpatialPixelsDataFrame(gwr.mod$SDF, data.frame(gwr.ov))
+  tmp <- as(gwr.mod$SDF, "SpatialPixels")
+  gw.spdf <-SpatialPixelsDataFrame(tmp, data.frame(gwr.ov))
   return(gw.spdf)
 }
 ```
@@ -125,15 +126,16 @@ And the results in `tmp` can be evaluated:
 ```{r}
 summary(tmp)
 ```
+This shows that are is NOT much variation in the Overall Accuracy - examine the 1st and 3rd quartile range. There is no point in mapping this! 
 
 ## Create a Mapping Function
-And the `SpatialPixelsDataFrame` can be mapped by defining a mapping function:
+And a mpping function can be dfined to map `SpatialPixelsDataFrame` objects:
 ```{r}
-gw.mapping <- function(grd, index = 1, cols=brewer.pal(4,'Reds'), 
+gw.mapping <- function(grd, index = 1, n = 4, cols=brewer.pal(n=4,'Reds'), 
     bounding.poly = roilib, x = 297000, y = 3650000, tit = "My Title") {
   z = data.frame(grd)[, index]
   zz = z[!is.na(z)]
-  shades <- auto.shading(zz, cols = cols)
+  shades <- auto.shading(zz, n=n, cols = cols)
   level.plot(grd, index = index, shades = shades)
   masker = poly.outer(grd, bounding.poly, extend = 100)
   add.masking(masker) 
@@ -143,13 +145,9 @@ gw.mapping <- function(grd, index = 1, cols=brewer.pal(4,'Reds'),
 ```
 ***Hint*** the `locator` function can be used to identify the `x` and `y` coordinates for the `choro.legend` function.
 
-```{r}
-par(mar = c(0,0,1,0))
-gw.mapping(tmp)
-```
-
-So now there are two functions, with a number of default parameters that the user can change,  that can be called to calculate and then map overall accuracy: 
+So now there are two functions, with a number of default parameters that the user can change,  that can be called to calculate and then map overall accuracy. This is in the general form: 
 ```{r eval=F}
+# this code will not run!
 tmp <- gw.accuracy(spdf)
 gw.mapping(tmp)
 ```
@@ -218,7 +216,8 @@ summary(df.res)
 
 And these can used to construct a `SpatialPixelsDataFrame` object:
 ```{r eval=T}
-gw.all.spdf <-SpatialPixelsDataFrame(gwr.mod$SDF, data.frame(df.res))
+tmp <- as(gwr.mod$SDF, "SpatialPixels")
+gw.all.spdf <-SpatialPixelsDataFrame(tmp, data.frame(df.res))
 ```
 
 ## Create a function 
@@ -271,35 +270,40 @@ user.prod.accuracy <- function(spdf, Field.class = "Boolean_FS",
     if(i ==1) df.res <- df
     if(i > 1) df.res <- data.frame(df.res, df)
   }
-  gw.spdf <-SpatialPixelsDataFrame(gwr.mod$SDF, data.frame(df.res))
+  tmp <- as(gwr.mod$SDF, "SpatialPixels")
+  gw.spdf <-SpatialPixelsDataFrame(tmp, data.frame(df.res))
   return(gw.spdf)
 }
 ```
 And then this can be called
-```{r eval=F,  message=F, warning=F}
+```{r eval=T,  message=F, warning=F}
 gwr.all.spdf <- user.prod.accuracy(spdf, Field.class = "Boolean_FS", 
     RS.class = "Boolean_RS", bw = 0.15, grid=grid, family= binomial)
 ```
-Or accepting the defaults:
-```{r eval=T,  message=F, warning=F}
-gwr.all.spdf <- user.prod.accuracy(spdf)
-```
 And the contents examined again: 
-```{r eval=T}
+```{r eval=F}
 summary(gwr.all.spdf@data)
 ```
 
 The elements of the `gwr.all.spdf` variable can be mapped using the function defined earlier: 
-```{r eval=F}
+```{r eval=T, fig.height = 7}
 par(mar = c(0,0,1,0))
 gw.mapping(gwr.all.spdf, tit = names(gwr.all.spdf)[1])
 ```
+
 Of course the parameters can be adjusted:
-```{r eval=F}
+```{r eval=T,  fig.height = 7}
 gw.mapping(gwr.all.spdf, index = 2, tit = names(gwr.all.spdf)[2])
-gw.mapping(gwr.all.spdf, index = 5, tit = names(gwr.all.spdf)[5], 
+```
+
+in different ways: 
+```{r eval=T,  fig.height = 7}
+gw.mapping(gwr.all.spdf, n= 6, index = 5, tit = names(gwr.all.spdf)[5], 
   cols = brewer.pal(6,'Spectral'))
-# or write to a file
+```
+
+or written to a file:
+```{r eval=F}
 png(filename = "plot.png")
 gw.mapping(gwr.all.spdf, index = 5, tit = names(gwr.all.spdf)[5], 
   cols = brewer.pal(6,'YlOrRd'))
@@ -312,7 +316,7 @@ for (i in seq(2, 10, by = 2)) {
 }  
 ```
 And other shading schemes are available - see:
-```{r eval=F}
+```{r eval=T, fig.height = 7}
 display.brewer.all()
 ```
 

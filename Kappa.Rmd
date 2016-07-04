@@ -1,7 +1,7 @@
 ---
 title: "GW Kappa and other 'Death to Kappa' measures"
-author: "Lex Comber"
-date: "June 2016"
+author: "Lex Comber & Paul Harris"
+date: "July 2016"
 output: pdf_document
 ---
 
@@ -9,10 +9,9 @@ output: pdf_document
 
 The final Geographically weighted extension is to calculate spatially distributed measures of a number of other statistics for reporting accuracy. These include the Kappa statistic estimate $\hat{\kappa}$, also known as k-hat and a full description of  $\hat{\kappa}$ can be found in the classic Congalton (1991) paper at [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf). What $\hat{\kappa}$ seeks to do is to measure the relationship between chance agreements between *Observed* and *Predicted* classes and the expected disagreement. It uses all the elements in the correspondence matrix and not just the diagonal ones and provides a measure of the proportion of agreement after chance agreement has been removed. 
 
-However the Kappa statistic has been heavily criticized by Pontius and Millones (2011), particular because its underlying assumption of a en expected random distribution of errors does not reflect the spatial auto-correlation of of many landscape processes including mapping errors. For these reasons Pontius and Millones (2011) recommend that
-the remote sensing community '*abandon the use of Kappa indices for purposes of accuracy assessment and map comparison*' and they suggest the use of *quantity disagreement* and *allocation disagreement* measures, described in their paper at [https://www.researchgate.net/publication/233196329_Death_to_Kappa_birth_of_quantity_disagreement_and_allocation_disagreement_for_accuracy_assessment_Int_J_Remote_Sens](https://www.researchgate.net/publication/233196329_Death_to_Kappa_birth_of_quantity_disagreement_and_allocation_disagreement_for_accuracy_assessment_Int_J_Remote_Sens) 
+However the Kappa statistic has been heavily criticized by Pontius and Millones (2011), particular because its underlying assumption of an expected random distribution of errors does not reflect the spatial auto-correlation of of many landscape processes including mapping errors. For these reasons Pontius and Millones (2011) recommend that the remote sensing community '*abandon the use of Kappa indices for purposes of accuracy assessment and map comparison*' and they suggest the use of *quantity disagreement* and *allocation disagreement* measures, described in their paper at [https://www.researchgate.net/publication/233196329_Death_to_Kappa_birth_of_quantity_disagreement_and_allocation_disagreement_for_accuracy_assessment_Int_J_Remote_Sens](https://www.researchgate.net/publication/233196329_Death_to_Kappa_birth_of_quantity_disagreement_and_allocation_disagreement_for_accuracy_assessment_Int_J_Remote_Sens) 
 
-Both of these approaches are considered under a Geographically Weighted framework in turn.
+Both of these approaches are now considered under a Geographically Weighted framework in turn.
 
 # 2. Data
 The packages can be called and the data can be loaded into R. This can be done locally after you have set the working directory using the `setwd()` function. The example from my computer is below:
@@ -133,7 +132,7 @@ dummy_xtab[7]
 ### Step 2: create a GW crosstab - just for testing!
 The next step is to create a set of dummy crosstabs at any geographical point location $u_1, u_2$. Functions that take a location as an argument and return the cross tabulation are called probe functions. The function `gwxtab_probe` is a tool for making probe functions. It takes a dummy cross-tabulation 'SpatialCrossTabs` object and a bandwidth to create a new function that maps a geographical location $(u_1,u_2)$ on to a geographically weighted cross-tabulation. At this stage in the code development it defaults to bisquare kernel.
 
-The kernel can be fixed - e.g. 20km
+The kernel bandwidth can be fixed - e.g. 20km
 ```{r eval=T}
 gwxt <- gwxtab_probe(dummy_xtab,fixed(20))
 # test it
@@ -191,7 +190,7 @@ The `SpatialPointsDataFrame` object can finally be created - this may take a cou
 ```{r eval=T}
 hg_ov <- gwxtab_sample(hg,dummy_xtab,adapt(bw),melt=ov)
 ```
-And the spatially varying Overall Accuracy can be visualized allow the size of each hexbin to vary in proportion to the value of the cross tab statistic - in this case overall accuracy:
+And the spatially varying Overall Accuracy can be visualized to allow the size of each hexbin to vary in proportion to the value of the cross tab statistic - in this case overall accuracy:
 ```{r eval=T}
 par(mar=c(0,0,0,0)+0.1)
 plot(roilib)
@@ -238,7 +237,7 @@ Create the `SpatialPointsDataFrame` object:
 ```{r eval=T}
 hg_kp <- gwxtab_sample(hg,dummy_xtab,adapt(15),melt=kp)
 
-# now on oaccasion this can result in very small negative values
+# now on occasion this can result in very small negative values
 # and small negative anomalies can be set to the min positive value
 # see http://www.cis.rit.edu/~ejipci/Reports/On_Using_and_Computing_the_Kappa_Statistic.pdf
 negkap2min <- function (x) {
@@ -314,7 +313,7 @@ colnames(tab) <- class.names.long
 tab
 ```
 
-The Geographically weighted approach applies these measures locally.
+The GW approach applies these measures locally.
 
 ## Quantity disagremment
 The quantity disagreement is computed from the sum of the row totals (the *Predicted* data) minus the sum of the column totals (the *Observed* data) divided by 2:
@@ -396,7 +395,7 @@ title("Quantity disagremment")
 
 ## GW Quantity disagremment
 
-The Geographically weighted approach applies these measures locally, which again requires construction of the `gwxtab` objects as in the Kappa example above. This is done in the following way: 
+The GW approach applies these measures locally, which again requires construction of the `gwxtab` objects as in the Kappa example above. This is done in the following way: 
 ### Step 1: create a dummy crosstab
 This is the same as above but repeated for clarity.
 ```{r eval=T}
@@ -439,7 +438,7 @@ title("Allocation disagremment")
 # Epilogue
 You may find it useful to have a look at the `diffeR` package put together by Gil Pontius and Alí Santacruz at [https://cran.r-project.org/web/packages/diffeR/diffeR.pdf](https://cran.r-project.org/web/packages/diffeR/diffeR.pdf). This includes a number of functions for calculating quality and allocation disagreements, including per class measures which were not implemented here. You could perhaps try to develop some of these such as the `quantityDj` function into a GW framework.
 
-In assembling these tutorials, a number of useful packages that were not previously known to us were found: `gwxtab` which really helped int he creation of the more complex (ie not probability based) spatially distributed measures of error. What we have done here is bolt these together with other commands from other packages - indicating that a good way of solving problems is to see who else might have done similar work.  
+In assembling these tutorials, a number of useful packages that were not previously known to us were found: `gwxtab` which really helped in the creation of the more complex (i.e. not probability based) spatially distributed measures of error. What we have done here is bolt these together with other commands from other packages - indicating that a good way of solving problems is to see who else might have done similar work.  
 
 # End
 
