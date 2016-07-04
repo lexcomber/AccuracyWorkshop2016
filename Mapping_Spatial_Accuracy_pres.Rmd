@@ -1,0 +1,190 @@
+---
+title: "Mapping Spatial Accuracy"
+author: "Lex Comber & Paul Harris"
+date: "June2016"
+output: ioslides_presentation
+---
+
+## Introduction
+
+- You have created a spatially distributed measure of **overall** accuracy
+    - Whether the *observed* class = *predicted* class
+- Using logistic regression (Generalized Linear Models) 
+- An *a*spatial measure then GW logistic Regression 
+- Now you will develop additional measures 
+    - User and Producer accuracies 
+- A full description on Congalton (1991):   
+    - [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf).
+- You will calculate these first principles and then develop  *GW* versions
+
+## Data set up
+
+- As before, you will need to load the data. 
+
+```{r, echo = F, eval=T,  message=F, warning=F}
+library(GISTools)
+library(spgwr)
+library(repmis)
+source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
+```
+
+- And use the code from the *Introduction* to create the correspondence matrix
+
+```{r, echo = F, eval=T}
+tab <- table(data$Boolean_RS, data$Boolean_FS)
+class.names.long <- c("Bare", "Grazing", "Urban", "Vegetation", "Woodland") 
+rownames(tab) <- class.names.long
+colnames(tab) <- class.names.long
+tab <- cbind(tab, rowSums(tab))
+tab <- rbind(tab, colSums(tab))
+rownames(tab)[6] <- "Total"
+colnames(tab)[6] <- "Total"
+```
+ - And calculate Overall, User and Producer accuracies 
+```{r, echo=F,eval=T}
+# Users accuracy
+tmp <- vector(mode = "numeric", length = 6) 
+for (i in 1:5) {
+	tmp[i] <- tab[i,i] / tab[i,6]
+	}
+tab <- cbind(tab, zapsmall(tmp, 3))
+colnames(tab)[7] <- "Users"
+# Producers accuracy
+tmp <- vector(mode = "numeric", length = 7) 
+for (i in 1:5) {
+	tmp[i] <- tab[i,i] / tab[6,i]
+	}
+tab <- rbind(tab, zapsmall(tmp, 3))
+rownames(tab)[7] <- "Producers"
+tab[7,7] <- sum(diag(table(data$Boolean_FS, 
+  data$Boolean_RS)))/sum(table(data$Boolean_FS, data$Boolean_RS))
+```
+
+## Data set up
+```{r eval=T}
+round(tab, 2)
+```
+
+## Recap: User Accuracy
+- Provides a measure of per-class accuracy 
+- Describes how probable it is that a pixel (or segmented object) of that has been labelled as *Grass* will actually be that class if it was visited in the field 
+- Indicates the errors of commission (inclusion) 
+- For the potential **user** of the map 
+    - Probability of correctly finding the class indicated on the map present on the ground
+
+## Recap: User Accuracy
+
+- Recall that the approach for User accuracy was as follows:
+    - For class `x`, create a `data.frame` containing: 
+        - Locations where the remote sensing indicated class `x` [0 or 1]
+        - Locations where the field visit indicated class `x` [0 or 1]
+- Construct a GLM of the extent to which the field class was predicted by the remote sensing class (*Observed* was predicted by *Predicted*)
+- Manipulate the resulting coefficients (`sum` and the `alogit` function) to determine the User accuracy (remembering that User accuracy is $P(FS = 1|RS = 1)$
+
+```{r echo=F, eval=T}
+# 1. Create a data.frame
+class.list <- unique(data$Boolean_RS)[order(unique(data$Boolean_RS))]
+# 'G' is for Grazing Land  
+class <- class.list[2]	
+# 1a where the RS indicated the class
+rs.class <- (data$Boolean_RS == class) * 1
+# 1b where the FS indicated the class
+fs.class <- (data$Boolean_FS == class) * 1
+# join together
+fsrs <- data.frame(cbind(fs.class,rs.class)) 
+```
+
+## GW User Accuracy
+- Construct a `SpatialPointsDataFrame` object
+- Input to the GW GLM function, `ggwr`:
+```{r eval=F}
+fsrs.spdf <- SpatialPointsDataFrame(coords = data[,2:3], 
+  data = data.frame(fsrs))
+grid <- SpatialPoints(expand.grid(x=seq(295000,363000,by=1000),
+  y=seq(3610000,3646000,by=1000)))
+plot(grid, cex = 0.7, col = "grey")
+plot(roilib, add = T)
+plot(fsrs.spdf, add = T, pch = 1, col = "#25252580")
+```
+
+## GW User Accuracy
+- Construct a `SpatialPointsDataFrame` object
+- Input to the GW GLM function, `ggwr`:
+```{r echo = F, eval=T}
+fsrs.spdf <- SpatialPointsDataFrame(coords = data[,2:3], 
+  data = data.frame(fsrs))
+grid <- SpatialPoints(expand.grid(x=seq(295000,363000,by=1000),
+  y=seq(3610000,3646000,by=1000)))
+plot(grid, cex = 0.7, col = "grey")
+plot(roilib, add = T)
+plot(fsrs.spdf, add = T, pch = 1, col = "#25252580")
+```
+
+## GW User Accuracy
+- Specifiy a bandwidth of 15% 
+```{r eval=T}
+bw = 0.15	
+```
+- And construct the GW model can be constructed.
+```{r eval=T,  message=F, warning=F}
+gwr.mod <- ggwr(fs.class~rs.class, data = fsrs.spdf, 
+  adapt = bw,fit.points=grid, family= binomial) 
+```
+
+## GW User Accuracy
+- And examine the (`gwr.mod`) 
+```{r eval=T}
+gwr.mod
+```
+
+## GW User Accuracy
+- The GW coefficients can be manipulated 
+```{r eval=T}
+coefs <- data.frame(gwr.mod$SDF)[,2:3]
+coefs[,2] <- rowSums(coefs) 
+# P(x = 1|y = 1)
+alogit <- function(x){exp(x)/(1+exp(x))}
+gwr.user <- alogit(coefs[,2]) 
+```
+- Spatial variation - compare the 1st and 3rd quartiles
+```{r eval=T}
+summary(gwr.user)
+```
+
+
+## GW User Accuracy
+- This can be mapped
+```{r echo=F, eval=T, fig.height = 6}
+shades = auto.shading(gwr.user, n=5,cols=brewer.pal(5,"Greens"),
+  cutter=rangeCuts, digits = 2)
+gwr.spdf = SpatialPixelsDataFrame(gwr.mod$SDF, data.frame(gwr.user))
+par(mar = c(0,0,1,0))
+level.plot(gwr.spdf,shades)
+lib.masker = poly.outer(gwr.spdf, roilib, extend = 100)
+add.masking(lib.masker) 
+plot(roilib, add = T)
+choro.legend(297000, 3650000,shades) 
+title("User Accuracy: Grazing Land")
+```
+
+## GW User Accuracy
+
+```{r echo=F, eval=T}
+# 2. GLM for User Accuracy
+mod1 <- glm(fs.class~rs.class,data = fsrs,family= binomial) 
+mod.coefs <- mod1$coefficients
+mod.coefs[2] <-sum(mod.coefs) 
+# P(y = 1|x = 1)
+mod.user <- alogit(mod.coefs[2])
+```
+- The *global* measure of User accuracy was `r round(as.vector(mod.user), 3)` and *locally* this varies from `r round(summary(gwr.user)[2],3)` to `r round(summary(gwr.user)[5],3)`:
+
+```{r eval=T}
+# global
+round(as.vector(mod.user), 3)
+# local
+round(summary(gwr.user)[c(2,5)],3)
+```
+- Producer Accuracy is dealt with in a similar way 
+
+

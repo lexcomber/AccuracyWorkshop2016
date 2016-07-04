@@ -1,0 +1,110 @@
+---
+title: "Kappa and Death to Kappa"
+author: "Lex Comber & Paul Harris"
+date: "June2016"
+output: ioslides_presentation
+---
+
+## Kappa estimates
+- Kappa statistic estimate $\hat{\kappa}$, also known as k-hat 
+- Described in Congalton (1991)  [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf) 
+- $\hat{\kappa}$ measures the relationship between chance agreements between *Observed* and *Predicted* classes and the expected disagreement
+- It is a measure of the proportion of agreement after chance agreement has been removed 
+
+## Death to Kappa 
+- The Kappa statistic heavily criticized by Pontius and Millones (2011)
+- Underlying assumption of an expected random distribution of errors 
+- Does not reflect the spatial auto-correlation of of many landscape processes 
+- Pontius and Millones (2011) suggest the use of *quantity disagreement* and *allocation disagreement* measures
+- Both of these approaches are considered under a Geographically Weighted framework in turn
+
+## Exercise 
+- Creates functions to calculate the metrics 
+    - **NOT** logisitic regression
+- Uses the `gwxtab` package 
+    - It can be downloaded from `github` 
+- You should explore the documentation around `gwxtab` 
+    - Harry and I have have both worked extensively with Chris Brunsdon 
+    - He does some great work and creates great code
+
+```{r eval=T, echo=F, message=F, warning=F, results="hide"}
+library(GISTools)
+library(spgwr)
+library(repmis)
+source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
+```
+
+```{r echo=F, eval=T,  message=F, warning=F}
+# the projection
+lib.proj <- CRS("+proj=utm +zone=33 +ellps=WGS84 +datum=WGS84 +units=m +no_defs ") 
+proj4string(roilib) <- lib.proj
+# create the point data file
+lib <- SpatialPointsDataFrame(cbind(data$East, data$North), 
+  data.frame(field = data$Boolean_FS, sat = data$Boolean_RS), 
+  proj4string = lib.proj)
+# convert the data to numeric form
+class.lut <- data.frame(code = unique(lib$field), num = c(1:5))
+# Urban 1; Bare 2; Woodland 3;  V = 4; Grazing land = 5
+# and reformat the attributes in 'lib'
+index = match(lib$field, class.lut$code)
+lib$field = class.lut$num[index]
+index = match(lib$sat, class.lut$code)
+lib$sat = class.lut$num[index]
+#install.packages("devtools", dep = T)
+library(devtools)
+#install_github('chrisbrunsdon/gwxtab')  
+library(gwxtab)
+dummy_xtab <- new_spxt(lib,'field','sat')
+gwxt <- gwxtab_probe(dummy_xtab,fixed(20))
+bw = round(nrow(lib)*0.15, 0)
+gwxt_ad <- gwxtab_probe(dummy_xtab,adapt(bw))
+kp <- function(x) {
+	part.1 <- sum(diag(x)) * sum(x)
+	part.2 <- sum(colSums(x) * rowSums(x))
+	part.3 <- sum(x)^2
+	k <- (part.1 - part.2) / (part.3 - part.2)
+	return(data.frame(kappa = k))
+}
+hg <- spsample(roilib,5000,'hexagonal',offset=c(0.5,0.5))
+hg_kp <- gwxtab_sample(hg,dummy_xtab,adapt(15),melt=kp)
+
+# now on oaccasion this can result in very small negative values
+# and small negative anomalies can be set to the min positive value
+# see http://www.cis.rit.edu/~ejipci/Reports/On_Using_and_Computing_the_Kappa_Statistic.pdf
+negkap2min <- function (x) {
+  index <- x < 0
+  x[index] <- min(x[!index])
+  return(x)}
+hg_kp$kappa <- negkap2min(hg_kp$kappa)
+```
+
+## `gwxtab`: *local* CMs 
+- Generates *local* correspondence matrices
+```{r eval=T}
+round(gwxt_ad(330749, 3627772), 2)
+```
+- For which local measures can be computed: eg Kappa
+```{r eval=T}
+kp(gwxt_ad(330749, 3627772))
+```
+
+## `gwxtab`: *local* measures
+Plot the hexagonal grid of points:
+```{r echo=T, eval=F}
+par(mar=c(0,0,0,0)+0.1)
+plot(roilib)
+#plot(lib,pch=16,col='navy',add=TRUE)
+plot(hg_kp,pch=16,col='indianred',cex=0.8*hg_kp$kappa,add=TRUE)
+```
+
+## `gwxtab`: *local* measures
+Plot the hexagonal grid of points:
+```{r echo=F, eval=T}
+par(mar=c(0,0,0,0)+0.1)
+plot(roilib)
+#plot(lib,pch=16,col='navy',add=TRUE)
+plot(hg_kp,pch=16,col='indianred',cex=0.8*hg_kp$kappa,add=TRUE)
+```
+
+
+

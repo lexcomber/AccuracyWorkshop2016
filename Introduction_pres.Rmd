@@ -1,0 +1,148 @@
+---
+title: "Introduction: the spatial analysis of accuracy using geographically weighted frameworks"
+author: "Lex Comber & Paul Harris"
+date: "June 2016"
+output: ioslides_presentation
+---
+
+## Introduction
+
+- In this first session you will  
+
+    - Open a point dataset (shapefile) of a field validation exercise
+    - Inspect the attributes and spatial properties of the data 
+    - Generate a correspondence matric and some classic measures of accuracy
+    - Generate some surfaces
+
+## Introduction
+
+- A zip file of the worksheet `PDF` and `Rmd` files for this workshop can be downloaded:  
+- [https://github.com/lexcomber/AccuracyWorkshop2016/blob/master/GW_Accuracy_Data.zip](https://github.com/lexcomber/AccuracyWorkshop2016/blob/master/GW_Accuracy_Data.zip). 
+- Save this to your working directory 
+- It can be loaded directly.
+- You will need to load some R packages: 
+```{r eval=F}
+install.packages("repmis", dep = T)
+install.packages("GISTools", dep = T)
+install.packages("spgwr", dep = T)
+```
+
+## Introduction
+
+ - ...and then call the packages (or *libraries* 
+
+```{r eval=T,  message=F, warning=F}
+library(GISTools)
+library(spgwr)
+library(repmis)
+```
+ - and load some data   
+```{r eval=T,  message=F, warning=F}
+source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
+```
+
+## Introduction
+
+- And have a look at the what you have
+```{r eval=T}
+ls()
+data.frame(data)[1:2,]
+```
+
+## Introduction
+
+- The number of continuous and categorical variables
+    - First few columns: ID (`PointID`) X and Y 
+    - Next set of 5 variables (columns 4 to 8), all with the suffix `_FS` are the fuzzy memberships 
+    - We will not use use these!
+- We will work with 
+    - `Boolean_FS`- *Field Survey* class, the *Observed* or *Reference* data
+    - `Boolean_RS`- *Remote Sensing* class the *Predicted* or *Classified* data
+- We will mainly be using the Boolean data in columns 9 and 15
+
+## Map the data
+ - We will map the data 
+    - Creating a `SpaatialPointsDataFrame` class of object
+    - Defined in the `sp` package 
+    - Loaded with the `GISTools` package
+
+```{r eval=T}
+# Convert data to SPDF - spatial data
+# 1.define a projection - see http://spatialreference.org/ 
+lyb.proj <- 
+  CRS("+proj=utm +zone=33 +ellps=WGS84 +datum=WGS84 +units=m +no_defs ") 
+# 2. then use this to project the data from its coordinates
+data.spdf <- SpatialPointsDataFrame(coords = data[,2:3], 
+  data = data, proj4string = lyb.proj)
+### define Tripoli
+x <- 329266.6; y <- 3640653; loc <-cbind(x,y)
+Tripoli <- SpatialPointsDataFrame(coords = loc, data = data[1,])
+```
+
+## Map the data
+```{r eval=T}
+### Map
+par(mar = c(0,0,0,0)); plot(roilib)
+plot(Tripoli, pch = 19, add = T, cex = 3, col = "#31A354")
+plot(data.spdf, add = T, pch = 20, cex = 1, col = "Black")
+```
+
+## The correspondence matrix
+ - We will be generating local models of the ccorrespondenc matrix 
+    - AKA the *accuracy*, *confusion*, *error* or *validation* matrix
+ - Overall accuracy: from the diagonal and off-diagonal elements
+ - User and producer accuracies from the diagonals and  marginal row and column totals 
+- Create the correspondence matrix: 
+```{r eval=T}
+tab <- table(data$Boolean_RS, data$Boolean_FS)
+```
+ - This generates a table of *Predicted* or *Classified* (rows) against *Observed* (columns). 
+
+## The correspondence matrix
+```{r eval=T}
+class.names.long <- c("Bare", 
+    "Grazing", "Urban", "Vegetation", "Woodland") 
+rownames(tab) <- class.names.long
+colnames(tab) <- class.names.long
+tab <- cbind(tab, rowSums(tab))
+tab <- rbind(tab, colSums(tab))
+rownames(tab)[6] <- "Total"
+colnames(tab)[6] <- "Total"
+tab
+```
+
+## Accuracy measures
+
+- Overall User and Producer accuracies 
+- See Congalton (1991)
+    - [http://uwf.edu/zhu/evr6930/2.pdf](http://uwf.edu/zhu/evr6930/2.pdf). 
+```{r eval=T, echo = F}
+# Users accuracy
+tmp <- vector(mode = "numeric", length = 6) 
+for (i in 1:5) {
+	tmp[i] <- tab[i,i] / tab[i,6]
+	}
+tab <- cbind(tab, zapsmall(tmp, 3))
+colnames(tab)[7] <- "Users"
+# Producers accuracy
+tmp <- vector(mode = "numeric", length = 7) 
+for (i in 1:5) {
+	tmp[i] <- tab[i,i] / tab[6,i]
+	}
+tab <- rbind(tab, zapsmall(tmp, 3))
+rownames(tab)[7] <- "Producers"
+tab[7,7] <- sum(diag(table(data$Boolean_FS, 
+  data$Boolean_RS)))/sum(table(data$Boolean_FS, data$Boolean_RS))
+```
+
+```{r eval=T}
+round(tab, 2)
+```
+
+## Correspondence, Probabilities and Regression
+-  *Overall*, *User* and *Producer* accuracies are probabilities
+- These can be calulated using logistic regressions
+- By predicting the degree to which the data (the accuracy meausure) is equal to 1  
+- Detail in the worksheet
+- In the next part you will map these 
+

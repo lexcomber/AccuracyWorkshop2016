@@ -1,0 +1,128 @@
+---
+title: "GW Frameworks and approaches"
+author: "Lex Comber & Paul Harris"
+date: "June2016"
+output: ioslides_presentation
+---
+
+## Geographically Weighted Approaches
+
+- GW regressions (Brunsdon et al. 1996) are similar to ordinary regression
+- **BUT** they use a moving window and compute ***local*** regression models at locations throughout the study area
+- User accuracy
+$$P(y = 1) = logit(b_0 + b_1x_1)$$
+- GW User accuracy 
+$$P(y_i = 1) = logit(b_{0(u_i, v_i)} + b_1x_{1(u_i, v_i)}    (eqn 2) $$
+where 
+$x_1$ and $y_1$ are classified and reference data
+$(u_i, v_i)$ is a vector of two-dimensional coordinate
+
+## Geographically Weighted Approaches
+
+- GW regressions (Brunsdon et al. 1996) are similar to ordinary regression
+- **BUT** they use a moving window and compute ***local*** regression models at locations throughout the study area
+- Producer accuracy
+$$P(x = 1) = logit(b_0 + b_1y_1)        (eqn 3)$$
+- GW Producer  accuracy 
+$$P(x_i = 1) = logit(b_{0(u_i, v_i)} + b_1y_{1(u_i, v_i)}    (eqn 3) $$
+where 
+$x_1$ and $y_1$ are classified and reference data
+$(u_i, v_i)$ is a vector of two-dimensional coordinate
+
+## Kernel, Moving window 
+
+- GW approaches use data under the kernel to construct a (local) model at each location 
+- Data are weighted with points further away contributing less 
+- The weight, $w_i$ atlocation $(u_i, v_i)$ is a decreasing function of $d_i$, the distance to the kernel centre
+
+- the Kernel need a shape
+- eg the *bisquare* kernel
+$$
+f(d) = \left\{ \begin{array}{cl}
+  \left(1 - \left( \frac{d}{h} \right)^2 \right)^2 & \mbox{ if $d < h$}; \\
+   & \\
+  0 & \mbox{ otherwise.} \end{array} \right.
+$$
+
+## Kernel, Moving window 
+- The kernal size or **bandwidth** $h$ can be ***fixed*** or ***adaptive***
+- Larger values of $h$ -> greater smoothing 
+- In this work we define the bandwidth include the nearest 15% data points
+
+
+## Load the data and packages
+```{r eval=T,  message=F, warning=F}
+library(GISTools)
+library(spgwr)
+library(repmis)
+source_data("http://github.com/lexcomber/LexTrainingR/blob/master/SpatialAccuracy.RData?raw=True")
+```
+
+## Create spatial data  
+- Indicates where the Field data / class is equal to the Classified data / class 
+
+```{r eval=T,  message=F, warning=F}
+res <- vector(length = dim(data)[1])
+for (i in 1: dim(data)[1]) {
+	if (data$Boolean_RS[i] == data$Boolean_FS[i]) {
+		res[i] <- 1
+	}}
+res.spdf <- SpatialPointsDataFrame(coords = data[,2:3], 
+  data = data.frame(res))
+```
+
+ - Define the a logit function:
+```{r eval=T,  message=F, warning=F}
+alogit <- function(x){exp(x)/(1+exp(x))}
+```
+
+## Create a grid over which to pass the kernel 
+```{r eval=F}
+grid <- SpatialPoints(expand.grid(x=seq(295000,363000,by=1000),
+  y=seq(3610000,3646000,by=1000)))
+par(mar = c(0,0,0,0))
+plot(roilib)
+plot(grid, cex = 0.7, col = "grey")
+plot(res.spdf, add = T, pch = 1, col = "#25252580")
+```
+
+## Create a grid over which to pass the kernel 
+```{r echo = F, eval=T, fig.height = 5}
+grid <- SpatialPoints(expand.grid(x=seq(295000,363000,by=1000),
+  y=seq(3610000,3646000,by=1000)))
+par(mar = c(0,0,0,0))
+plot(roilib)
+plot(grid, cex = 0.7, col = "grey", add = T)
+plot(res.spdf, add = T, pch = 1, col = "#25252580")
+```
+
+## GW overall accuracy example
+```{r eval=T,  message=F, warning=F}
+bw = 0.15
+gwr.mod <- ggwr(res~1, data = res.spdf, adapt = bw, 
+  fit.points = grid, family= binomial) 
+gwr.ov <- alogit(data.frame(gwr.mod$SDF)[,2])
+```
+- The results show only a small amount variation: 
+```{r eval=T, message = F}
+summary(gwr.ov)
+```
+
+## GW overall accuracy example
+```{r, echo = F, eval=T, message = F, fig.height = 6}
+shades = auto.shading(gwr.ov, cols=brewer.pal(4,"Greens"))
+gwr.res = SpatialPixelsDataFrame(gwr.mod$SDF, data.frame(gwr.ov))
+par(mar = c(0,0,2,0))
+level.plot(gwr.res,shades)
+lib.masker = poly.outer(gwr.res, roilib, extend = 100)
+add.masking(lib.masker) 
+plot(roilib, add = T)
+choro.legend(297000, 3650000,shades) 
+```
+
+## Summary
+- Geographically Weighted approaches are used toconstructs *local* models of accuracy
+- References
+    - Brunsdon, C.F., Fotheringham, A.S. and Charlton M. (1996). Geographically Weighted Regression - A Method for Exploring Spatial Non-Stationarity, *Geographic Analysis*, 28: 281-298.
+    - Gollini, I., Lu, B., Charlton, M., Brunsdon, C., and Harris, P. (2013). GWmodel: an R Package for Exploring Spatial Heterogeneity using Geographically Weighted Models. *arXiv preprint arXiv*:1306.0413.
+
